@@ -6,9 +6,11 @@ import (
 	"log"
 
 	"github.com/jpastorm/dialogflowbot/domain/user"
+	"github.com/jpastorm/dialogflowbot/infraestructure/dialogflow"
 	userHandler "github.com/jpastorm/dialogflowbot/infraestructure/handler/user"
 	userStorage "github.com/jpastorm/dialogflowbot/infraestructure/postgres/user"
 	"github.com/jpastorm/dialogflowbot/infraestructure/response"
+	"github.com/jpastorm/dialogflowbot/infraestructure/telegram"
 )
 
 // Logger interface
@@ -21,10 +23,15 @@ type Logger interface {
 func Run() error {
 	config := newConfiguration("./configuration.json")
 	db := newPSQLDatabase(config)
-
 	logger := newLogrus(config.LogFolder, true)
 	api := newEcho(config, response.HTTPErrorHandler)
 	loadSignatures(config, logger)
+	//DIALOGFLOW
+	df := dialogflow.New(logger, config.DialogFlow.ProjectID)
+	//TELEGRAM
+	tg := telegram.New(logger, df, config.Telegram.Token)
+	tg.RunService()
+
 	userUsecase := user.New(userStorage.New(db))
 	userHandler.NewRouter(api, userUsecase)
 	port := fmt.Sprintf(":%d", config.PortHTTP)

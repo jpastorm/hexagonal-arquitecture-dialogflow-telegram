@@ -8,16 +8,18 @@ import (
 
 // Configuration model
 type Configuration struct {
-	AllowedOrigins  []string `json:"allowed_origins"`
-	AllowedMethods  []string `json:"allowed_methods"`
-	LogFolder       string   `json:"log_folder"`
-	Env             string   `json:"env"`
-	PortHTTP        uint     `json:"port_http"`
-	CertPem         string   `json:"cert_pem"`
-	KeyPem          string   `json:"key_pem"`
-	PrivateFileSign string   `json:"private_file_sign"`
-	PublicFileSign  string   `json:"public_file_sign"`
-	Database        Database `json:"database"`
+	AllowedOrigins  []string   `json:"allowed_origins"`
+	AllowedMethods  []string   `json:"allowed_methods"`
+	LogFolder       string     `json:"log_folder"`
+	Env             string     `json:"env"`
+	PortHTTP        uint       `json:"port_http"`
+	CertPem         string     `json:"cert_pem"`
+	KeyPem          string     `json:"key_pem"`
+	PrivateFileSign string     `json:"private_file_sign"`
+	PublicFileSign  string     `json:"public_file_sign"`
+	Database        Database   `json:"database"`
+	Telegram        Telegram   `json:"telegram"`
+	DialogFlow      DialogFlow `json:"dialogflow"`
 }
 
 func newConfiguration(path string) Configuration {
@@ -43,6 +45,14 @@ type Database struct {
 	Port     uint   `json:"port"`
 	Name     string `json:"name"`
 	SSLMode  string `json:"ssl_mode"`
+}
+
+type Telegram struct {
+	Token string `json:"token"`
+}
+
+type DialogFlow struct {
+	ProjectID string `json:"project_id"`
 }
 
 // DBEngine obtains db engine
