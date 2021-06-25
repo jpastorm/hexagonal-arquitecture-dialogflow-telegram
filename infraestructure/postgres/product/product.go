@@ -1,4 +1,4 @@
-package user
+package product
 
 import (
 	"database/sql"
@@ -8,11 +8,11 @@ import (
 	"github.com/jpastorm/dialogflowbot/model"
 )
 
-const table = "users"
+const table = "products"
 
 var fields = []string{
 	"name",
-	"telegram_id",
+	"price",
 }
 
 var (
@@ -22,19 +22,19 @@ var (
 	psqlGetAll = postgres.BuildSQLSelect(table, fields)
 )
 
-// User struct that implement the interface domain.user.Storage
-type User struct {
+// Products struct that implement the interface domain.products.Storage
+type Product struct {
 	db *sql.DB
 }
 
-// New return a new User
-func New(db *sql.DB) User {
-	return User{db}
+// New return a new Product
+func New(db *sql.DB) Product {
+	return Product{db}
 }
 
-// Create this method creates a model.User in postgres db
-func (c User) Create(m *model.User) error {
-	stmt, err := c.db.Prepare(psqlInsert)
+// Create this method creates a model.Product in postgres db
+func (p Product) Create(m *model.Product) error {
+	stmt, err := p.db.Prepare(psqlInsert)
 	if err != nil {
 		return err
 	}
@@ -42,7 +42,7 @@ func (c User) Create(m *model.User) error {
 
 	err = stmt.QueryRow(
 		m.Name,
-		m.TelegramID,
+		m.Price,
 	).Scan(&m.ID, &m.CreatedAt)
 	if err != nil {
 		if errPsql := postgres.CheckError(err); errPsql != nil {
@@ -55,9 +55,9 @@ func (c User) Create(m *model.User) error {
 	return nil
 }
 
-// Update this method updates a model.User in postgres db
-func (c User) Update(m *model.User) error {
-	stmt, err := c.db.Prepare(psqlUpdate)
+// Update this method updates a model.Product in postgres db
+func (p Product) Update(m *model.Product) error {
+	stmt, err := p.db.Prepare(psqlUpdate)
 	if err != nil {
 		return err
 	}
@@ -66,7 +66,7 @@ func (c User) Update(m *model.User) error {
 	err = sqlutil.ExecAffectingOneRow(
 		stmt,
 		m.Name,
-		m.TelegramID,
+		m.Price,
 		m.ID,
 	)
 	if err != nil {
@@ -79,9 +79,9 @@ func (c User) Update(m *model.User) error {
 	return nil
 }
 
-// Delete this method deletes a model.User by ID in postgres db
-func (c User) Delete(ID uint) error {
-	stmt, err := c.db.Prepare(psqlDelete)
+// Delete this method deletes a model.Product by ID in postgres db
+func (p Product) Delete(ID uint) error {
+	stmt, err := p.db.Prepare(psqlDelete)
 	if err != nil {
 		return err
 	}
@@ -90,31 +90,31 @@ func (c User) Delete(ID uint) error {
 	return sqlutil.ExecAffectingOneRow(stmt, ID)
 }
 
-// GetWhere this method get a model.User with filters in postgres  db
-func (c User) GetWhere(filter model.Fields, sort model.SortFields) (model.User, error) {
+// GetWhere this method get a model.Product with filters in postgres  db
+func (p Product) GetWhere(filter model.Fields, sort model.SortFields) (model.Product, error) {
 	condition, args := postgres.BuildSQLWhere(filter)
 	query := psqlGetAll + " " + condition
 
 	query += " " + postgres.BuildSQLOrderBy(sort)
 
-	stmt, err := c.db.Prepare(query)
+	stmt, err := p.db.Prepare(query)
 	if err != nil {
-		return model.User{}, err
+		return model.Product{}, err
 	}
 	defer stmt.Close()
 
-	return c.scanRow(stmt.QueryRow(args...))
+	return p.scanRow(stmt.QueryRow(args...))
 }
 
-// GetAllWhere this method get all ordered model.Users with filters in postgres db
-func (c User) GetAllWhere(filter model.Fields, sort model.SortFields, pag model.Pagination) (model.Users, error) {
+// GetAllWhere this method get all ordered model.Products with filters in postgres db
+func (p Product) GetAllWhere(filter model.Fields, sort model.SortFields, pag model.Pagination) (model.Products, error) {
 	conditions, args := postgres.BuildSQLWhere(filter)
 	query := psqlGetAll + " " + conditions
 
 	query += " " + postgres.BuildSQLOrderBy(sort)
 	query += " " + postgres.BuildSQLPagination(pag)
 
-	stmt, err := c.db.Prepare(query)
+	stmt, err := p.db.Prepare(query)
 	if err != nil {
 		return nil, err
 	}
@@ -126,9 +126,9 @@ func (c User) GetAllWhere(filter model.Fields, sort model.SortFields, pag model.
 	}
 	defer rows.Close()
 
-	ms := make(model.Users, 0)
+	ms := make(model.Products, 0)
 	for rows.Next() {
-		m, err := c.scanRow(rows)
+		m, err := p.scanRow(rows)
 		if err != nil {
 			return nil, err
 		}
@@ -138,22 +138,22 @@ func (c User) GetAllWhere(filter model.Fields, sort model.SortFields, pag model.
 	return ms, nil
 }
 
-func (c User) scanRow(s sqlutil.RowScanner) (model.User, error) {
-	user := model.User{}
+func (p Product) scanRow(s sqlutil.RowScanner) (model.Product, error) {
+	product := model.Product{}
 	updatedAtNull := sql.NullTime{}
 
 	err := s.Scan(
-		&user.ID,
-		&user.Name,
-		&user.TelegramID,
-		&user.CreatedAt,
+		&product.ID,
+		&product.Name,
+		&product.Price,
+		&product.CreatedAt,
 		&updatedAtNull,
 	)
 	if err != nil {
-		return user, err
+		return product, err
 	}
 
-	user.UpdatedAt = updatedAtNull.Time
+	product.UpdatedAt = updatedAtNull.Time
 
-	return user, nil
+	return product, nil
 }

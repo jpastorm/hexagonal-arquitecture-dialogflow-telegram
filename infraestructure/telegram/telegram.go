@@ -5,7 +5,9 @@ import (
 	"log"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	"github.com/jpastorm/dialogflowbot/domain/product"
 	"github.com/jpastorm/dialogflowbot/infraestructure/dialogflow"
+	"github.com/jpastorm/dialogflowbot/model"
 )
 
 type Logger interface {
@@ -15,13 +17,14 @@ type Usecase interface {
 	DetectIntentText(sessionID, text, languageCode string) (string, error)
 }
 type Telegram struct {
-	Token      string
-	logger     Logger
-	DialogFlow dialogflow.Usecase
+	Token          string
+	logger         Logger
+	DialogFlow     dialogflow.Usecase
+	productUsecase product.UseCase
 }
 
-func New(logger Logger, dialogflow dialogflow.Usecase, token string) *Telegram {
-	return &Telegram{logger: logger, DialogFlow: dialogflow, Token: token}
+func New(logger Logger, dialogflow dialogflow.Usecase, productUseCase product.UseCase, token string) *Telegram {
+	return &Telegram{logger: logger, DialogFlow: dialogflow, productUsecase: productUseCase, Token: token}
 }
 
 func (t Telegram) RunService() {
@@ -48,18 +51,61 @@ func (t Telegram) RunService() {
 
 		//log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
 		//MarshalIndent
-		fmt.Println("MIJSON")
+		// fmt.Println("MIJSON")
 
-		fmt.Println(update.Message.From.UserName)
-		fmt.Println(update.Message.Text)
-		fmt.Print(update.Message.Chat.UserName)
-		dfResponse, err := t.DialogFlow.DetectIntentText(update.Message.From.UserName, update.Message.Text, "es")
+		// fmt.Println(update.Message.From.UserName)
+		// fmt.Println(update.Message.Text)
+		// fmt.Print(update.Message.Chat.UserName)
+		dfResponse, action, err := t.DialogFlow.DetectIntentText(update.Message.From.UserName, update.Message.Text, "es")
 		if err != nil {
 			t.logger.Warnf("error %v", err)
 		}
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, dfResponse)
-		msg.ReplyToMessageID = update.Message.MessageID
 		fmt.Println(dfResponse)
+		fmt.Println(action)
+
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, dfResponse)
+		//msg.ReplyToMessageID = update.Message.MessageID
 		bot.Send(msg)
+		message, err := t.typeOfAction(action)
+		if err != nil {
+			t.logger.Warnf(err.Error())
+		}
+		if message != "" {
+			msg := tgbotapi.NewMessage(update.Message.Chat.ID, message)
+			bot.Send(msg)
+		}
 	}
+
+}
+
+func (t Telegram) typeOfAction(action string) (string, error) {
+	var prefix = "input."
+
+	switch action {
+	case prefix + "lista":
+		list, err := t.getAllProducts()
+		if err != nil {
+			return "", err
+		}
+
+		return list, nil
+	}
+	return "", nil
+}
+
+func (t Telegram) getAllProducts() (string, error) {
+	var list string
+
+	fields := model.Fields{}
+	sortsFields := model.SortFields{}
+	pag := model.Pagination{}
+	products, err := t.productUsecase.GetAllWhere(fields, sortsFields, pag)
+	if err != nil {
+		return list, err
+	}
+
+	for i, product := range products {
+		list += fmt.Sprintf("%d. %s   --> %.2f \n", i+1, product.Name, product.Price)
+	}
+	return list, nil
 }

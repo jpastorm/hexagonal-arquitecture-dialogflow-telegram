@@ -14,7 +14,7 @@ type Logger interface {
 }
 
 type Usecase interface {
-	DetectIntentText(sessionID, text, languageCode string) (string, error)
+	DetectIntentText(sessionID, text, languageCode string) (string, string, error)
 }
 
 type DialogFlow struct {
@@ -26,17 +26,17 @@ func New(logger Logger, projectID string) *DialogFlow {
 	return &DialogFlow{logger: logger, ProjectID: projectID}
 }
 
-func (d DialogFlow) DetectIntentText(sessionID, text, languageCode string) (string, error) {
+func (d DialogFlow) DetectIntentText(sessionID, text, languageCode string) (string, string, error) {
 	ctx := context.Background()
 
 	sessionClient, err := dialogflow.NewSessionsClient(ctx)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	defer sessionClient.Close()
 
 	if d.ProjectID == "" || sessionID == "" {
-		return "", errors.New(fmt.Sprintf("Received empty project (%s) or session (%s)", d.ProjectID, sessionID))
+		return "", "", errors.New(fmt.Sprintf("Received empty project (%s) or session (%s)", d.ProjectID, sessionID))
 	}
 
 	sessionPath := fmt.Sprintf("projects/%s/agent/sessions/%s", d.ProjectID, sessionID)
@@ -47,10 +47,11 @@ func (d DialogFlow) DetectIntentText(sessionID, text, languageCode string) (stri
 
 	response, err := sessionClient.DetectIntent(ctx, &request)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	queryResult := response.GetQueryResult()
 	fulfillmentText := queryResult.GetFulfillmentText()
-	return fulfillmentText, nil
+	fmt.Println(queryResult.Action)
+	return fulfillmentText, queryResult.Action, nil
 }
